@@ -1,0 +1,69 @@
+pipeline {
+    agent any
+    stages {
+        stage('webServer setup') {
+            steps {
+                //
+                script{
+                    sshagent(['ssh-key']) {
+                sh """ssh -A -o StrictHostKeyChecking=no -l ec2-user 10.0.1.206 << EOF 
+                            ls
+                            cd AquilaCMS
+                            ls
+                            export MONGODB_URI=" mongodb://ip-10-0-0-64.ec2.internal:27017/nileshdb"
+                            export LANGUAGE="en" 
+                            export FIRSTNAME="nilesh"
+                            export LASTNAME="yadav"
+                            export EMAIL=demonilesh@mail.com
+                            export PASSWORD=Ab1234567
+                            export APPURL=user-Frontt-ALB-355265076.us-east-1.elb.amazonaws.com
+                            export ADMIN_PREFIX=admin
+                            export SITENAME=Demo-Store
+                            yarn install
+                            nohup npm start &
+                            pm2 status
+                           exit
+                            EOF
+                """
+                 }
+                }
+             }
+        }
+        stage('dbServer setup') {
+            steps {
+                
+                 script{
+                    sshagent(['ssh-key']) {
+                sh """ssh -A -o StrictHostKeyChecking=no -l ubuntu 10.0.0.64 << EOF 
+                           wget -qO - https://www.mongodb.org/static/pgp/server-5.0.asc | sudo apt-key add -
+                            sudo apt-get install gnupg
+                            wget -qO - https://www.mongodb.org/static/pgp/server-5.0.asc | sudo apt-key add -
+                            echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/5.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-5.0.list
+                            sudo apt-get update
+                            sudo apt-get upgrade
+                            sudo apt-get install -y mongodb-org
+                            echo "mongodb-org hold" | sudo dpkg --set-selections
+                            echo "mongodb-org-database hold" | sudo dpkg --set-selections
+                            echo "mongodb-org-server hold" | sudo dpkg --set-selections
+                            echo "mongodb-org-shell hold" | sudo dpkg --set-selections
+                            echo "mongodb-org-mongos hold" | sudo dpkg --set-selections
+                            echo "mongodb-org-tools hold" | sudo dpkg --set-selections
+                            sudo systemctl start mongod
+                            sudo systemctl daemon-reload
+                            sudo systemctl enable mongod
+                            sudo systemctl restart mongod
+                            sudo systemctl status mongod
+                            cd /etc/
+                            cat mongod.conf
+                            exit
+                            EOF
+                """
+                        
+                    }
+                }
+                 
+            }
+        }
+        
+    }
+}
